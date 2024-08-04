@@ -387,9 +387,12 @@ class Channel:
                 )
         except MinerException as exc:
             raise MinerException(f"Channel: {self._login}") from exc
-        signature: JsonType | None = response["data"]['streamPlaybackAccessToken']["signature"]
-        value: JsonType | None = response["data"]['streamPlaybackAccessToken']["value"]
-        if not signature or not value:
+        try:
+            signature: JsonType | None = response["data"]['streamPlaybackAccessToken']["signature"]
+            value: JsonType | None = response["data"]['streamPlaybackAccessToken']["value"]
+            if not signature or not value:
+                return False
+        except KeyError:
             return False
 
         RequestBroadcastQualitiesURL = f"https://usher.ttvnw.net/api/channel/hls/{self._login}.m3u8?sig={signature}&token={value}"
