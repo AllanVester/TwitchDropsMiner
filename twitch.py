@@ -6,7 +6,7 @@ import json
 import asyncio
 import logging
 from time import time
-from itertools import chain
+from itertools import chain, islice
 from functools import partial
 from collections import abc, deque, OrderedDict
 from datetime import datetime, timedelta, timezone
@@ -913,7 +913,7 @@ class Twitch:
                 # use the other set to set them online if possible
                 if acl_channels:
                     await asyncio.gather(
-                        *(channel.update_stream(trigger_events=False) for channel in acl_channels[:50]),
+                        *(channel.update_stream(trigger_events=False) for channel in islice(acl_channels, 50)),
                         return_exceptions=True,
                     )
                 # finally, add them as new channels
