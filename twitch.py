@@ -913,7 +913,7 @@ class Twitch:
                 # use the other set to set them online if possible
                 if acl_channels:
                     await asyncio.gather(
-                        *(channel.update_stream(trigger_events=False) for channel in acl_channels),
+                        *(channel.update_stream(trigger_events=False) for channel in acl_channels[:50]),
                         return_exceptions=True,
                     )
                 # finally, add them as new channels
