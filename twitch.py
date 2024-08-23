@@ -905,7 +905,8 @@ class Twitch:
                         and campaign.can_earn_within(next_hour)
                     ):
                         if campaign.allowed_channels:
-                            acl_channels.update(campaign.allowed_channels)
+                            # limit to 50 channels per campaign
+                            acl_channels.update(islice(campaign.allowed_channels, 50))
                         else:
                             no_acl.add(campaign.game)
                 # remove all ACL channels that already exist from the other set
@@ -913,7 +914,7 @@ class Twitch:
                 # use the other set to set them online if possible
                 if acl_channels:
                     await asyncio.gather(
-                        *(channel.update_stream(trigger_events=True) for channel in islice(acl_channels, 50)),
+                        *(channel.update_stream(trigger_events=True) for channel in acl_channels),
                         return_exceptions=True,
                     )
                 # finally, add them as new channels
