@@ -905,7 +905,7 @@ class Twitch:
                         and campaign.can_earn_within(next_hour)
                     ):
                         if campaign.allowed_channels:
-                            # limit to 50 channels per campaign
+                            # limit to 10 channels per campaign
                             acl_channels.update(islice(campaign.allowed_channels, 10))
                         else:
                             no_acl.add(campaign.game)
@@ -914,11 +914,11 @@ class Twitch:
                 # use the other set to set them online if possible
                 if acl_channels:
                     await asyncio.gather(
-                        *(channel.update_stream(trigger_events=False) for channel in islice(acl_channels, 10)),
+                        *(channel.update_stream(trigger_events=False) for channel in acl_channels),
                         return_exceptions=True,
                     )
                 # finally, add them as new channels
-                new_channels.update(islice(acl_channels, 10))
+                new_channels.update(acl_channels)
                 for game in no_acl:
                     # for every campaign without an ACL, for it's game,
                     # add a list of live channels with drops enabled
