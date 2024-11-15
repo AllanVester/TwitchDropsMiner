@@ -906,7 +906,7 @@ class Twitch:
                     ):
                         if campaign.allowed_channels:
                             # limit to 10 channels per campaign
-                            acl_channels.update(campaign.allowed_channels)
+                            acl_channels.update(islice(campaign.allowed_channels, 10))
                         else:
                             no_acl.add(campaign.game)
                 # remove all ACL channels that already exist from the other set
