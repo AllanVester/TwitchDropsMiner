@@ -920,7 +920,7 @@ class Twitch:
                 for game in no_acl:
                     # for every campaign without an ACL, for it's game,
                     # add a list of live channels with drops enabled
-                    new_channels.update(await self.get_live_streams(game))
+                    new_channels.update(islice(await self.get_live_streams(game), 10))
                 # sort them descending by viewers, by priority and by game priority
                 # NOTE: We can drop OrderedSet now because there's no more channels being added
                 ordered_channels: list[Channel] = sorted(
