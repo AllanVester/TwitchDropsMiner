@@ -104,5 +104,5 @@ exe = EXE(
     entitlements_file=None,
     bootloader_ignore_signals=False,
     disable_windowed_traceback=False,
-    name="Twitch Drops Miner (by DevilXD)",
+    name="Twitch Drops Miner (by DevilXD) - Original",
 )
