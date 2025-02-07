@@ -6,7 +6,7 @@ import json
 import asyncio
 import logging
 from time import time
-from itertools import chain
+from itertools import chain, islice
 from functools import partial
 from collections import abc, deque, OrderedDict
 from datetime import datetime, timedelta, timezone
