@@ -1567,6 +1567,7 @@ class Twitch:
                             "message" in error_dict
                             and error_dict["message"] in (
                                 "service error",
+                                "PersistedQueryNotFound",
                                 "service unavailable",
                                 "service timeout",
                                 "context deadline exceeded",
