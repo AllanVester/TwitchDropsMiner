@@ -1659,7 +1659,7 @@ class Twitch:
         available_campaigns: dict[str, JsonType] = {
             c["id"]: c
             for c in available_list
-            if c["status"] in applicable_statuses and if c["id"] != "b1eec440-4ca3-11f0-80ca-d668528f617e" # that are currently not expired
+            if c["status"] in applicable_statuses and c["id"] != "b1eec440-4ca3-11f0-80ca-d668528f617e" # that are currently not expired
         }
         # fetch detailed data for each campaign, in chunks
         # specifically use an intermediate list per a Python bug
