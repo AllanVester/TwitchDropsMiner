@@ -254,7 +254,7 @@ GQL_OPERATIONS: dict[str, GQLOperation] = {
     # returns stream information for a particular channel
     "GetStreamInfo": GQLOperation(
         "VideoPlayerStreamInfoOverlayChannel",
-        "198492e0857f6aedead9665c81c5a06d67b25b58034649687124083ff288597d",
+        "e785b65ff71ad7b363b34878335f27dd9372869ad0c5740a130b9268bcdbe7e7",
         variables={
             "channel": ...,  # channel login
         },
@@ -320,7 +320,7 @@ GQL_OPERATIONS: dict[str, GQLOperation] = {
     # returns drops available for a particular channel (unused)
     "AvailableDrops": GQLOperation(
         "DropsHighlightService_AvailableDrops",
-        "eff13f4a43157238e40b4cd74b0dac3a41b5f8fb31de1a3b19347fae84e60b92",
+        "782dad0f032942260171d2d80a654f88bdd0c5a9dddc392e9bc92218a0f42d20",
         variables={
             "channelID": ...,  # channel ID as a str
         },
@@ -348,14 +348,14 @@ GQL_OPERATIONS: dict[str, GQLOperation] = {
     ),
     "NotificationsView": GQLOperation(  # unused, triggers notifications "update-summary"
         "OnsiteNotifications_View",
-        "e8e06193f8df73d04a1260df318585d1bd7a7bb447afa058e52095513f2bfa4f",
+        "db011164c7980ce0b90b04d8ecab0c27cfc8505170e2d6b1a5a51060a8e658df",
         variables={
             "input": {},
         },
     ),
     "NotificationsList": GQLOperation(  # unused
         "OnsiteNotifications_ListNotifications",
-        "11cdb54a2706c2c0b2969769907675680f02a6e77d8afe79a749180ad16bfea6",
+        "65bdc7f01ed3082f4382a154d190e23ad5459771c61318265cfdb59f63aad492",
         variables={
             "cursor": "",
             "displayType": "VIEWER",
