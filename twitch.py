@@ -1652,7 +1652,7 @@ class Twitch:
         claimed_benefits: dict[str, datetime] = {
             b["id"]: timestamp(b["lastAwardedAt"]) for b in inventory["gameEventDrops"]
         }
-        inventory_data: dict[str, JsonType] = {c["id"]: c for c in ongoing_campaigns}
+        inventory_data: dict[str, JsonType] = {c["id"]: c for c in ongoing_campaigns if c["id"] != "b1eec440-4ca3-11f0-80ca-d668528f617e"}
         # fetch general available campaigns data (campaigns)
         response = await self.gql_request(GQL_OPERATIONS["Campaigns"])
         available_list: list[JsonType] = response["data"]["currentUser"]["dropCampaigns"] or []
