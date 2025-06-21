@@ -1562,21 +1562,40 @@ class Twitch:
             force_retry: bool = False
             for response_json in response_list:
                 if "errors" in response_json:
+                    additional_message = ""
                     for error_dict in response_json["errors"]:
-                        if (
-                            "message" in error_dict
-                            and error_dict["message"] in (
+                        if "message" in error_dict:
+                            if error_dict["message"] in (
                                 "service error",
-                                "PersistedQueryNotFound",
                                 "service unavailable",
                                 "service timeout",
                                 "context deadline exceeded",
-                            )
-                        ):
-                            force_retry = True
-                            break
+                            ):
+                                force_retry = True
+                                break
+                            elif error_dict["message"] in "PersistedQueryNotFound":
+                                additional_message = (
+                                "\n\nPersistedQueryNotFound can often dissapear by itself. You can also contribute by:\n"
+                                "1. Opening Twitch with your Browser\n"
+                                "2. Opening Developer Toools (f12)\n"
+                                "3. Going to Network\n"
+                                "4. Reloading and navigating around Twitch (streams, drop page, game search etc.)\n"
+                                "    - Claiming a Drop and ChannelPoints is required for those 2 queries\n"
+                                "5. Filter URLs by \"gql\""
+                                "6. Searching REQUEST CONTENTS (search icon, not filtering url) for all the things under \"GQL_OPERATIONS\" in constants.py\n"
+                                "    - The second string, so \"VideoPlayerStreamInfoOverlayChannel\", not \"GetStreamInfo\"\n"
+                                "7. Opening the requests under gql.twitch.tv"
+                                "8. Going to Request (not response, you might have to disable raw or otherwise set it to json view)"
+                                "9. One should have a \"sha256Hash\" under [number]->extensions->persistedQuery"
+                                "    - MAKE SURE the \"operationName\" under [number] is actually the one you want!!!"
+                                "10. Replacing the hash in constants.py and making a pull request on GitHub\n"
+                                "    - Please document all the queries you checked, even if they didn't change, or just check all\n"
+                                "\nIf this is unclear, tell me on GitHub and I'll try to give better instruictions\n"
+                                "Issue #126 is tracking a possible permanent solution, if you can help with that\n"
+                                "\nThanks ;)"
+                                )
                     else:
-                        raise MinerException(f"GQL error: {response_json['errors']}")
+                        raise MinerException(f"GQL error: {response_json['errors']}{additional_message if additional_message else ''}")
                 if force_retry:
                     break
             else:
