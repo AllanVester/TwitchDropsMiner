@@ -1566,7 +1566,6 @@ class Twitch:
                         if (
                             "message" in error_dict
                             and error_dict["message"] in (
-                                "server error",
                                 "service error",
                                 "PersistedQueryNotFound",
                                 "service unavailable",
@@ -1615,7 +1614,7 @@ class Twitch:
                 GQL_OPERATIONS["CampaignDetails"].with_variables(
                     {"channelLogin": str(auth_state.user_id), "dropID": cid}
                 )
-                for cid in campaign_ids if cid != "b1eec440-4ca3-11f0-80ca-d668528f617e"
+                for cid in campaign_ids
             ]
         )
         fetched_data: dict[str, JsonType] = {
@@ -1652,7 +1651,7 @@ class Twitch:
         claimed_benefits: dict[str, datetime] = {
             b["id"]: timestamp(b["lastAwardedAt"]) for b in inventory["gameEventDrops"]
         }
-        inventory_data: dict[str, JsonType] = {c["id"]: c for c in ongoing_campaigns if c["id"] != "b1eec440-4ca3-11f0-80ca-d668528f617e"}
+        inventory_data: dict[str, JsonType] = {c["id"]: c for c in ongoing_campaigns}
         # fetch general available campaigns data (campaigns)
         response = await self.gql_request(GQL_OPERATIONS["Campaigns"])
         available_list: list[JsonType] = response["data"]["currentUser"]["dropCampaigns"] or []
@@ -1660,7 +1659,7 @@ class Twitch:
         available_campaigns: dict[str, JsonType] = {
             c["id"]: c
             for c in available_list
-            if c["status"] in applicable_statuses  # that are currently not expired
+            if c["status"] in applicable_statuses and if c["id"] != "b1eec440-4ca3-11f0-80ca-d668528f617e" # that are currently not expired
         }
         # fetch detailed data for each campaign, in chunks
         # specifically use an intermediate list per a Python bug
