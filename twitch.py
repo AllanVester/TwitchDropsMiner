@@ -1615,7 +1615,7 @@ class Twitch:
                 GQL_OPERATIONS["CampaignDetails"].with_variables(
                     {"channelLogin": str(auth_state.user_id), "dropID": cid}
                 )
-                for cid in campaign_ids
+                for cid in campaign_ids if cid != "b1eec440-4ca3-11f0-80ca-d668528f617e"
             ]
         )
         fetched_data: dict[str, JsonType] = {
