@@ -114,7 +114,6 @@ class Channel:
         self._login: str = login
         self._display_name: str | None = display_name
         self._spade_url: URLType | None = None
-        self.points: int | None = None
         self._stream: Stream | None = None
         self._pending_stream_up: asyncio.Task[Any] | None = None
         # ACL-based channels are:
