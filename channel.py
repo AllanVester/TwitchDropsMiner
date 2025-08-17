@@ -377,7 +377,7 @@ class Channel:
         ]
         return {"data": (b64encode(json_minify(payload).encode("utf8"))).decode("utf8")}
 
-    async def send_watch(self) -> tuple[bool, bool]:
+    async def send_watch(self) -> bool:
         """
         This uses the encoded payload on spade url to simulate watching the stream.
         Optimally, send every 60 seconds to advance drops.
