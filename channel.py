@@ -96,7 +96,7 @@ class Stream:
 class Channel:
     __slots__ = (
         "_twitch", "_gui_channels", "id", "_login", "_display_name", "_spade_url",
-        "_stream", "_pending_stream_up", "acl_based"
+        "points", "_stream", "_pending_stream_up", "acl_based"
     )
     
     def __init__(
@@ -114,6 +114,7 @@ class Channel:
         self._login: str = login
         self._display_name: str | None = display_name
         self._spade_url: URLType | None = None
+        self.points: int | None = None
         self._stream: Stream | None = None
         self._pending_stream_up: asyncio.Task[Any] | None = None
         # ACL-based channels are:
