@@ -39,7 +39,6 @@ class Stream:
         self.drops_enabled: bool = False
         self.game: Game | None = Game(game) if game else None
         self.title: str = title
-        self._stream_url: URLType | None = None
 
     @cached_property
     def _spade_payload(self) -> JsonType:
@@ -95,6 +94,11 @@ class Stream:
 
 
 class Channel:
+    __slots__ = (
+        "_twitch", "_gui_channels", "id", "_login", "_display_name", "_spade_url",
+        "_stream", "_pending_stream_up", "acl_based"
+    )
+    
     def __init__(
         self,
         twitch: Twitch,
@@ -399,7 +403,8 @@ class Channel:
         ]
         return {"data": (b64encode(json_minify(payload).encode("utf8"))).decode("utf8")}
 
-    async def send_watch(self) -> tuple[bool, bool]:
+    # NOTE: This is currently unused.
+    async def _send_watch(self) -> bool:
         """
         Start of fix for 2024/5 API Change
         """
@@ -475,10 +480,7 @@ class Channel:
         Old code below.
         """
 
-        """
-        This uses the encoded payload on spade url to simulate watching the stream.
-        Optimally, send every 60 seconds to advance drops.
-        """
+    async def send_watch(self) -> bool:
         if not self.online:
             return False
         if self._spade_url is None:
