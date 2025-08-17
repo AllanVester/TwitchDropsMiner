@@ -39,6 +39,7 @@ class Stream:
         self.drops_enabled: bool = False
         self.game: Game | None = Game(game) if game else None
         self.title: str = title
+        self._stream_url: URLType | None = None
 
     @cached_property
     def _spade_payload(self) -> JsonType:
@@ -94,11 +95,6 @@ class Stream:
 
 
 class Channel:
-    __slots__ = (
-        "_twitch", "_gui_channels", "id", "_login", "_display_name", "_spade_url",
-        "_stream", "_pending_stream_up", "acl_based"
-    )
-    
     def __init__(
         self,
         twitch: Twitch,
@@ -403,67 +399,94 @@ class Channel:
         ]
         return {"data": (b64encode(json_minify(payload).encode("utf8"))).decode("utf8")}
 
-    # NOTE: This is currently unused.
-    async def _send_watch(self) -> bool:
+    async def send_watch(self) -> tuple[bool, bool]:
         """
-        This performs a HEAD request on the stream's current playlist,
-        to simulate watching the stream.
-        Optimally, send every ~20 seconds to advance drops.
+        Start of fix for 2024/5 API Change
         """
-        if self._stream is None:
-            return False
-        # get the stream url
-        stream_url = await self._stream.get_stream_url()
-        if stream_url is None:
-            return False
-        # fetch a list of chunks available to download for the stream
-        # NOTE: the CDN is configured to forcibly disconnect shortly after serving the list,
-        # if we don't do it yourselves. Lets help it by actually doing it ourselves instead.
-        async with self._twitch.request(
-            "GET", stream_url, headers={"Connection": "close"}
-        ) as chunks_response:
-            if chunks_response.status >= 400:
-                # if the stream goes OFFLINE, trying to get a list of chunks returns a 404
-                return False
-            available_chunks: str = await chunks_response.text()
-        # the response may contain some invalid JSON with duplicate double quotes
-        # in the value strings: we need to get rid of them by removing the "url" key entirely
-        # if no JSON can be found within the response, this is a NOOP
-        available_chunks = re.sub(r'"url": ?".+}",', '', available_chunks)
-        # try to decode the suspected JSON
         try:
-            available_json: JsonType = json.loads(available_chunks)
-        except json.JSONDecodeError:
-            # No JSON: this is the expected path. Do nothing and continue with the below.
-            pass
-        else:
-            # JSON was decoded - if there's an error, log it and report failure
-            if isinstance(available_json, list):
-                available_json = available_json[0]
-            if "error" in available_json:
-                logger.error(f"Send watch error: \"{available_json['error']}\"")
-            return False
-        # the list contains ~10-13 chunks of the stream at 2s intervals,
-        # pick the last chunk URL available. Ensure it's not the end-of-stream tag,
-        # otherwise use the 2nd to last line.
-        chunks_list: list[str] = available_chunks.strip().split("\n")
-        selected_chunk: str = chunks_list[-1]
-        if selected_chunk == "#EXT-X-ENDLIST":
-            selected_chunk = chunks_list[-2]
-        stream_chunk_url: URLType = URLType(selected_chunk)
-        # sending a HEAD request is enough to advance the drops,
-        # without downloading the actual stream data
-        async with self._twitch.request("HEAD", stream_chunk_url) as head_response:
-            return head_response.status == 200
+            response: JsonType = await self._twitch.gql_request(        # Gets signature and value
+                GQL_OPERATIONS["PlaybackAccessToken"].with_variables({"login": self._login})
+                )
+        except MinerException as exc:
+            raise MinerException(f"Channel: {self._login}") from exc
+        signature: JsonType | None = response["data"]['streamPlaybackAccessToken']["signature"]
+        value: JsonType | None = response["data"]['streamPlaybackAccessToken']["value"]
+        if not signature or not value:
+            return False, False
 
-    async def send_watch(self) -> bool:
-        if self._stream is None:
+        RequestBroadcastQualitiesURL = f"https://usher.ttvnw.net/api/channel/hls/{self._login}.m3u8?sig={signature}&token={value}"
+
+        try:
+            async with self._twitch.request(                            # Gets list of m3u8 playlists
+                "GET", RequestBroadcastQualitiesURL
+            ) as response1:
+                BroadcastQualitiesM3U = await response1.text()
+        except RequestException:
+            logger.error(f"Failed to recieve list of m3u8 playlists.")
+            return False, False
+        
+        BroadcastQualitiesM3U = BroadcastQualitiesM3U.split("\n")
+        BroadcastQualitiesList = []
+        for i in range(int(len(BroadcastQualitiesM3U)/3)):              # gets all m3u8 playlists
+            BroadcastQualitiesList.append(BroadcastQualitiesM3U[4+3*i])
+
+        if not all(validators.url(url) for url in BroadcastQualitiesList):
+            logger.error(f"Couldn't parse list of m3u8 playlists.")
+            return False, False
+
+        retries = -1
+        for BroadcastQuality in BroadcastQualitiesList:
+            retries = retries + 1
+            try:
+                async with self._twitch.request(                            # Gets actual streams
+                    "GET", BroadcastQuality, return_error = True
+                ) as response2:
+                    if response2.status == 200:
+                        StreamURLList = await response2.text()
+                    else:
+                        logger.log(CALL,f"Request for streams from m3u8 returned: {response2}")
+                        continue
+            except RequestException:
+                logger.error(f"Failed to recieve list of streams.")
+                return False, False
+
+            StreamURL = StreamURLList.split("\n")[-2] # For whatever reason this includes a blank line at the end, this should probably be handled better in the future
+            if not validators.url(StreamURL):
+                logger.error(f"Failed to parse streamURL.")
+                return False, False
+
+            try:
+                async with self._twitch.request(                            # The HEAD request is enough to advance drops
+                    "HEAD", StreamURL, return_error = True
+                ) as response3:
+                    if response3.status == 200:
+                        logger.log(CALL,f"Successfully watched after {retries} retries.")
+                        return True, False
+                    else:
+                        logger.error(f"Request for stream HEAD returned: {response2}")
+            except RequestException:
+                logger.error(f"Failed to recieve list of streams.")
+                return False, False
+            await asyncio.sleep(1) # Wait a second to not spam twitch API
+        logger.error(f"Failed to watch all of {len(BroadcastQualitiesList)} Broadcast qualities. Can be ignored if occuring up to ~15x/hour.")
+        return False, True
+        """
+        End of fix for 2024/5 API Change.
+        Old code below.
+        """
+
+        """
+        This uses the encoded payload on spade url to simulate watching the stream.
+        Optimally, send every 60 seconds to advance drops.
+        """
+        if not self.online:
             return False
         if self._spade_url is None:
             self._spade_url = await self.get_spade_url()
+        logger.debug(f"Sending minute-watched to {self.name}")
         try:
             async with self._twitch.request(
-                "POST", self._spade_url, data=self._stream._spade_payload
+                "POST", self._spade_url, data=self._payload
             ) as response:
                 return response.status == 204
         except RequestException:
