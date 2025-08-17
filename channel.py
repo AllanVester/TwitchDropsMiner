@@ -40,7 +40,6 @@ class Stream:
         self.game: Game | None = Game(game) if game else None
         self.title: str = title
 
-    @cached_property
     def _spade_payload(self) -> JsonType:
         payload = [
             {
