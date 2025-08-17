@@ -40,26 +40,6 @@ class Stream:
         self.game: Game | None = Game(game) if game else None
         self.title: str = title
 
-    def _spade_payload(self) -> JsonType:
-        payload = [
-            {
-                "event": "minute-watched",
-                "properties": {
-                    "broadcast_id": str(self.broadcast_id),
-                    "channel_id": str(self.channel.id),
-                    "channel": self.channel._login,
-                    "hidden": False,
-                    "live": True,
-                    "location": "channel",
-                    "logged_in": True,
-                    "muted": False,
-                    "player": "site",
-                    "user_id": self.channel._twitch._auth_state.user_id,
-                }
-            }
-        ]
-        return {"data": (b64encode(json_minify(payload).encode("utf8"))).decode("utf8")}
-
     @classmethod
     def from_get_stream(cls, channel: Channel, data: JsonType) -> Stream:
         stream = data["stream"]
@@ -93,11 +73,6 @@ class Stream:
 
 
 class Channel:
-    __slots__ = (
-        "_twitch", "_gui_channels", "id", "_login", "_display_name", "_spade_url",
-        "points", "_stream", "_pending_stream_up", "acl_based"
-    )
-    
     def __init__(
         self,
         twitch: Twitch,
@@ -402,92 +377,19 @@ class Channel:
         ]
         return {"data": (b64encode(json_minify(payload).encode("utf8"))).decode("utf8")}
 
-    # NOTE: This is currently unused.
-    async def _send_watch(self) -> bool:
+    async def send_watch(self) -> tuple[bool, bool]:
         """
-        Start of fix for 2024/5 API Change
+        This uses the encoded payload on spade url to simulate watching the stream.
+        Optimally, send every 60 seconds to advance drops.
         """
-        try:
-            response: JsonType = await self._twitch.gql_request(        # Gets signature and value
-                GQL_OPERATIONS["PlaybackAccessToken"].with_variables({"login": self._login})
-                )
-        except MinerException as exc:
-            raise MinerException(f"Channel: {self._login}") from exc
-        signature: JsonType | None = response["data"]['streamPlaybackAccessToken']["signature"]
-        value: JsonType | None = response["data"]['streamPlaybackAccessToken']["value"]
-        if not signature or not value:
-            return False, False
-
-        RequestBroadcastQualitiesURL = f"https://usher.ttvnw.net/api/channel/hls/{self._login}.m3u8?sig={signature}&token={value}"
-
-        try:
-            async with self._twitch.request(                            # Gets list of m3u8 playlists
-                "GET", RequestBroadcastQualitiesURL
-            ) as response1:
-                BroadcastQualitiesM3U = await response1.text()
-        except RequestException:
-            logger.error(f"Failed to recieve list of m3u8 playlists.")
-            return False, False
-        
-        BroadcastQualitiesM3U = BroadcastQualitiesM3U.split("\n")
-        BroadcastQualitiesList = []
-        for i in range(int(len(BroadcastQualitiesM3U)/3)):              # gets all m3u8 playlists
-            BroadcastQualitiesList.append(BroadcastQualitiesM3U[4+3*i])
-
-        if not all(validators.url(url) for url in BroadcastQualitiesList):
-            logger.error(f"Couldn't parse list of m3u8 playlists.")
-            return False, False
-
-        retries = -1
-        for BroadcastQuality in BroadcastQualitiesList:
-            retries = retries + 1
-            try:
-                async with self._twitch.request(                            # Gets actual streams
-                    "GET", BroadcastQuality, return_error = True
-                ) as response2:
-                    if response2.status == 200:
-                        StreamURLList = await response2.text()
-                    else:
-                        logger.log(CALL,f"Request for streams from m3u8 returned: {response2}")
-                        continue
-            except RequestException:
-                logger.error(f"Failed to recieve list of streams.")
-                return False, False
-
-            StreamURL = StreamURLList.split("\n")[-2] # For whatever reason this includes a blank line at the end, this should probably be handled better in the future
-            if not validators.url(StreamURL):
-                logger.error(f"Failed to parse streamURL.")
-                return False, False
-
-            try:
-                async with self._twitch.request(                            # The HEAD request is enough to advance drops
-                    "HEAD", StreamURL, return_error = True
-                ) as response3:
-                    if response3.status == 200:
-                        logger.log(CALL,f"Successfully watched after {retries} retries.")
-                        return True, False
-                    else:
-                        logger.error(f"Request for stream HEAD returned: {response2}")
-            except RequestException:
-                logger.error(f"Failed to recieve list of streams.")
-                return False, False
-            await asyncio.sleep(1) # Wait a second to not spam twitch API
-        logger.error(f"Failed to watch all of {len(BroadcastQualitiesList)} Broadcast qualities. Can be ignored if occuring up to ~15x/hour.")
-        return False, True
-        """
-        End of fix for 2024/5 API Change.
-        Old code below.
-        """
-
-    async def send_watch(self) -> bool:
-        if self._stream is None:
+        if not self.online:
             return False
         if self._spade_url is None:
             self._spade_url = await self.get_spade_url()
         logger.debug(f"Sending minute-watched to {self.name}")
         try:
             async with self._twitch.request(
-                "POST", self._spade_url, data=self._stream._spade_payload
+                "POST", self._spade_url, data=self._payload
             ) as response:
                 return response.status == 204
         except RequestException:
