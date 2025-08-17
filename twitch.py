@@ -1041,7 +1041,7 @@ class Twitch:
         with suppress(asyncio.TimeoutError):
             await asyncio.wait_for(self._watching_restart.wait(), timeout=delay)
 
-    @task_wrapper(critical=True)
+    @task_wrapper
     async def _watch_loop(self) -> NoReturn:
         interval: float = WATCH_INTERVAL.total_seconds()
         while True:
