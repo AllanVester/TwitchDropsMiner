@@ -40,27 +40,6 @@ class Stream:
         self.game: Game | None = Game(game) if game else None
         self.title: str = title
 
-    @cached_property
-    def _spade_payload(self) -> JsonType:
-        payload = [
-            {
-                "event": "minute-watched",
-                "properties": {
-                    "broadcast_id": str(self.broadcast_id),
-                    "channel_id": str(self.channel.id),
-                    "channel": self.channel._login,
-                    "hidden": False,
-                    "live": True,
-                    "location": "channel",
-                    "logged_in": True,
-                    "muted": False,
-                    "player": "site",
-                    "user_id": self.channel._twitch._auth_state.user_id,
-                }
-            }
-        ]
-        return {"data": (b64encode(json_minify(payload).encode("utf8"))).decode("utf8")}
-
     @classmethod
     def from_get_stream(cls, channel: Channel, data: JsonType) -> Stream:
         stream = data["stream"]
@@ -94,11 +73,6 @@ class Stream:
 
 
 class Channel:
-    __slots__ = (
-        "_twitch", "_gui_channels", "id", "_login", "_display_name", "_spade_url",
-        "_stream", "_pending_stream_up", "acl_based"
-    )
-    
     def __init__(
         self,
         twitch: Twitch,
@@ -403,67 +377,19 @@ class Channel:
         ]
         return {"data": (b64encode(json_minify(payload).encode("utf8"))).decode("utf8")}
 
-    # NOTE: This is currently unused.
-    async def _send_watch(self) -> bool:
-        """
-        This performs a HEAD request on the stream's current playlist,
-        to simulate watching the stream.
-        Optimally, send every ~20 seconds to advance drops.
-        """
-        if self._stream is None:
-            return False
-        # get the stream url
-        stream_url = await self._stream.get_stream_url()
-        if stream_url is None:
-            return False
-        # fetch a list of chunks available to download for the stream
-        # NOTE: the CDN is configured to forcibly disconnect shortly after serving the list,
-        # if we don't do it yourselves. Lets help it by actually doing it ourselves instead.
-        async with self._twitch.request(
-            "GET", stream_url, headers={"Connection": "close"}
-        ) as chunks_response:
-            if chunks_response.status >= 400:
-                # if the stream goes OFFLINE, trying to get a list of chunks returns a 404
-                return False
-            available_chunks: str = await chunks_response.text()
-        # the response may contain some invalid JSON with duplicate double quotes
-        # in the value strings: we need to get rid of them by removing the "url" key entirely
-        # if no JSON can be found within the response, this is a NOOP
-        available_chunks = re.sub(r'"url": ?".+}",', '', available_chunks)
-        # try to decode the suspected JSON
-        try:
-            available_json: JsonType = json.loads(available_chunks)
-        except json.JSONDecodeError:
-            # No JSON: this is the expected path. Do nothing and continue with the below.
-            pass
-        else:
-            # JSON was decoded - if there's an error, log it and report failure
-            if isinstance(available_json, list):
-                available_json = available_json[0]
-            if "error" in available_json:
-                logger.error(f"Send watch error: \"{available_json['error']}\"")
-            return False
-        # the list contains ~10-13 chunks of the stream at 2s intervals,
-        # pick the last chunk URL available. Ensure it's not the end-of-stream tag,
-        # otherwise use the 2nd to last line.
-        chunks_list: list[str] = available_chunks.strip().split("\n")
-        selected_chunk: str = chunks_list[-1]
-        if selected_chunk == "#EXT-X-ENDLIST":
-            selected_chunk = chunks_list[-2]
-        stream_chunk_url: URLType = URLType(selected_chunk)
-        # sending a HEAD request is enough to advance the drops,
-        # without downloading the actual stream data
-        async with self._twitch.request("HEAD", stream_chunk_url) as head_response:
-            return head_response.status == 200
-
     async def send_watch(self) -> bool:
-        if self._stream is None:
+        """
+        This uses the encoded payload on spade url to simulate watching the stream.
+        Optimally, send every 60 seconds to advance drops.
+        """
+        if not self.online:
             return False
         if self._spade_url is None:
             self._spade_url = await self.get_spade_url()
+        logger.debug(f"Sending minute-watched to {self.name}")
         try:
             async with self._twitch.request(
-                "POST", self._spade_url, data=self._stream._spade_payload
+                "POST", self._spade_url, data=self._payload
             ) as response:
                 return response.status == 204
         except RequestException:
