@@ -1112,7 +1112,7 @@ class Twitch:
                             logger.log(CALL, f"Drop progress from active search: {drop_text}")
                     else:
                         logger.log(CALL, "No active drop could be determined")
-            await self._watch_sleep(last_watch + interval - time())
+            await self._watch_sleep(interval - min(time() - last_sent, interval))
 
     @task_wrapper
     async def _maintenance_task(self) -> None:
