@@ -1046,16 +1046,10 @@ class Twitch:
         interval: float = WATCH_INTERVAL.total_seconds()
         while True:
             channel: Channel = await self.watching_channel.get()
-            succeeded, repeat_now = await channel.send_watch()
-            logger.log(CALL,f"returned watch, succeeded: {succeeded}, repeat_new: {repeat_now}")
+            succeeded: bool = await channel.send_watch()
             if not succeeded:
-                # this usually means the campaign expired in the middle of mining
-                # or the m3u8 playlists all returned a 500 Internal server error
-                # NOTE: the maintenance task should switch the channel right after this happens
-                if not repeat_now:
-                    await self._watch_sleep(interval)
-                continue
-            last_watch = time()
+                logger.log(CALL, f"Watch requested failed for channel: {channel.name}")
+            last_sent: float = time()
             self._drop_update = asyncio.Future()
             use_active: bool = False
             try:
@@ -1118,7 +1112,7 @@ class Twitch:
                             logger.log(CALL, f"Drop progress from active search: {drop_text}")
                     else:
                         logger.log(CALL, "No active drop could be determined")
-            await self._watch_sleep(last_watch + interval - time())
+            await self._watch_sleep(interval - min(time() - last_sent, interval))
 
     @task_wrapper
     async def _maintenance_task(self) -> None:
