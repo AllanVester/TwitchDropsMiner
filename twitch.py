@@ -391,7 +391,8 @@ class _AuthState:
             await coro_unless_closed(login_form.wait_for_login_press())
 
     async def _oauth_login(self) -> str:
-        login_form: LoginForm = self._twitch.gui.login
+        if self._twitch.gui_enabled:
+            login_form: LoginForm = self._twitch.gui.login
         client_info: ClientInfo = self._twitch._client_type
         headers = {
             "Accept": "application/json",
@@ -430,10 +431,15 @@ class _AuthState:
                     device_code: str = response_json["device_code"]
                     user_code: str = response_json["user_code"]
                     interval: int = response_json["interval"]
+                    verification_uri: URL = URL(response_json["verification_uri"])
                     expires_at = now + timedelta(seconds=response_json["expires_in"])
 
                 # Print the code to the user, open them the activate page so they can type it in
-                await login_form.ask_enter_code(user_code)
+                if self._twitch.gui_enabled:
+                    await login_form.ask_enter_code(verification_uri, user_code)
+                else:
+                    await self._twitch.wait_until_login()
+                    raise ReloadRequest()
 
                 payload = {
                     "client_id": self._twitch._client_type.CLIENT_ID,
@@ -659,9 +665,10 @@ class _AuthState:
             self.device_id = cookie["unique_id"].value
         if not self._hasattrs("access_token", "user_id"):
             # looks like we're missing something
-            login_form: LoginForm = self._twitch.gui.login
+            if self._twitch.gui_enabled:
+                login_form: LoginForm = self._twitch.gui.login
+                login_form.update(_("gui", "login", "logging_in"), None)
             logger.info("Checking login")
-            login_form.update(_("gui", "login", "logging_in"), None)
             for attempt in range(2):
                 cookie = jar.filter_cookies(client_info.CLIENT_URL)
                 if "auth-token" not in cookie:
@@ -693,7 +700,8 @@ class _AuthState:
             self.user_id = int(validate_response["user_id"])
             cookie["persistent"] = str(self.user_id)
             logger.info(f"Login successful, user ID: {self.user_id}")
-            login_form.update(_("gui", "login", "logged_in"), self.user_id)
+            if self._twitch.gui_enabled:
+                login_form.update(_("gui", "login", "logged_in"), self.user_id)
             # update our cookie and save it
             jar.update_cookies(cookie, client_info.CLIENT_URL)
             jar.save(COOKIES_PATH)
