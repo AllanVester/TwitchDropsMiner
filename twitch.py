@@ -1642,7 +1642,7 @@ class Twitch:
         session_timeout = timedelta(seconds=session.timeout.total or 0)
         backoff = ExponentialBackoff(maximum=3*60)
         for delay in backoff:
-            if self.gui.close_requested:
+            if self._state is State.EXIT:
                 raise ExitRequest()
             elif (
                 invalidate_after is not None
