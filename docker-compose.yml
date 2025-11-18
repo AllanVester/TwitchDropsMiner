@@ -1,0 +1,14 @@
+services:  
+  twitch-drops-miner: 
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: twitchdropsminer-web
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      - TZ=${TIMEZONE:-UTC}
+      - DOCKER_CONTAINER=true
