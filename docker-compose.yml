@@ -1,10 +1,11 @@
 services:
   twitch_miner:
     build:
+      dockerfile: Dockerfile
       context: .
     container_name: TwitchDropsMiner-VNC
     ports:
       - "6080:6080"
     environment:
       - VNC_PASSWORD=secret
-    restart: unless-stopped
+    # restart: unless-stopped

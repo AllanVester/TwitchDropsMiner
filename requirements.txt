@@ -8,6 +8,8 @@ validators
 pywin32; sys_platform == "win32"
 truststore; python_version >= "3.10"
 
+numpy
+
 # unused dependencies
 # selenium-wire
 # undetected-chromedriver
