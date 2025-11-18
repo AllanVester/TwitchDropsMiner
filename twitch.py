@@ -746,8 +746,12 @@ class Twitch:
         self._client_type: ClientInfo = ClientType.ANDROID_APP
         self._session: aiohttp.ClientSession | None = None
         self._auth_state: _AuthState = _AuthState(self)
+        self.gui_enabled = self.settings.gui_enabled
         # GUI
-        self.gui = GUIManager(self)
+        if self.gui_enabled:
+            self.gui = GUIManager(self)
+        else:
+            self.gui = None
         # Storing and watching channels
         self.channels: OrderedDict[int, Channel] = OrderedDict()
         self.watching_channel: AwaitableValue[Channel] = AwaitableValue()
@@ -847,19 +851,22 @@ class Twitch:
         Called when the application window has to be prevented from closing, even after the user
         closes it with X. Usually used solely to display tracebacks from the closing sequence.
         """
-        self.gui.prevent_close()
+        if self.gui_enabled:
+            self.gui.prevent_close()
 
     def print(self, message: str):
         """
         Can be used to print messages within the GUI.
         """
-        self.gui.print(message)
+        if self.gui_enabled:
+            self.gui.print(message)
 
     def save(self, *, force: bool = False) -> None:
         """
         Saves the application state.
         """
-        self.gui.save(force=force)
+        if self.gui_enabled:
+            self.gui.save(force=force)
         self.settings.save(force=force)
 
     def get_priority(self, channel: Channel) -> int:
@@ -907,7 +914,8 @@ class Twitch:
         • Selecting a stream to watch, and watching it
         • Changing the stream that's being watched if necessary
         """
-        self.gui.start()
+        if self.gui_enabled:
+            self.gui.start()
         auth_state = await self.get_auth()
         await self.websocket.start()
         # NOTE: watch task is explicitly restarted on each new run
@@ -927,15 +935,24 @@ class Twitch:
         self.change_state(State.INVENTORY_FETCH)
         while True:
             if self._state is State.IDLE:
-                self.gui.status.update(_("gui", "status", "idle"))
+                if self.settings.dump:
+                    if self.gui_enabled:
+                        self.gui.close()
+                    continue
+                if self.gui_enabled:
+                    self.gui.tray.change_icon("idle")
+                    self.gui.status.update(_("gui", "status", "idle"))
                 self.stop_watching()
                 # clear the flag and wait until it's set again
                 self._state_change.clear()
             elif self._state is State.INVENTORY_FETCH:
+                if self.gui_enabled:
+                    self.gui.tray.change_icon("maint")
                 # ensure the websocket is running
                 await self.websocket.start()
                 await self.fetch_inventory()
-                self.gui.set_games(set(campaign.game for campaign in self.inventory))
+                if self.gui_enabled:
+                    self.gui.set_games(set(campaign.game for campaign in self.inventory))
                 # Save state on every inventory fetch
                 self.save()
                 self.change_state(State.GAMES_UPDATE)
@@ -968,7 +985,8 @@ class Twitch:
                 self.restart_watching()
                 self.change_state(State.CHANNELS_CLEANUP)
             elif self._state is State.CHANNELS_CLEANUP:
-                self.gui.status.update(_("gui", "status", "cleanup"))
+                if self.gui_enabled:
+                    self.gui.status.update(_("gui", "status", "cleanup"))
                 if not self.wanted_games or full_cleanup:
                     # no games selected or we're doing full cleanup: remove everything
                     to_remove_channels: list[Channel] = list(channels.values())
@@ -1008,11 +1026,13 @@ class Twitch:
                     self.print(_("status", "no_campaign"))
                     self.change_state(State.IDLE)
             elif self._state is State.CHANNELS_FETCH:
-                self.gui.status.update(_("gui", "status", "gathering"))
+                if self.gui_enabled:
+                    self.gui.status.update(_("gui", "status", "gathering"))
                 # start with all current channels, clear the memory and GUI
                 new_channels: OrderedSet[Channel] = OrderedSet(channels.values())
                 channels.clear()
-                self.gui.channels.clear()
+                if self.gui_enabled:
+                    self.gui.channels.clear()
                 # gather and add ACL channels from campaigns
                 # NOTE: we consider only campaigns that can be progressed
                 # NOTE: we use another set so that we can set them online separately
@@ -1114,11 +1134,19 @@ class Twitch:
                     watching_channel,
                 )
             elif self._state is State.CHANNEL_SWITCH:
-                self.gui.status.update(_("gui", "status", "switching"))
+                if self.settings.dump:
+                    if self.gui_enabled:
+                        self.gui.close()
+                    continue
+                if self.gui_enabled:
+                    self.gui.status.update(_("gui", "status", "switching"))
                 # Change into the selected channel, stay in the watching channel,
                 # or select a new channel that meets the required conditions
                 new_watching = None
-                selected_channel = self.gui.channels.get_selection()
+                if self.gui_enabled:
+                    selected_channel = self.gui.channels.get_selection()
+                else:
+                    selected_channel = None
                 if selected_channel is not None and self.can_watch(selected_channel):
                     # selected channel is checked first, and set as long as we can watch it
                     new_watching = selected_channel
@@ -1139,9 +1167,10 @@ class Twitch:
                     self._state_change.clear()
                 elif watching_channel is not None:
                     # otherwise, continue watching what we had before
-                    self.gui.status.update(
-                        _("status", "watching").format(channel=watching_channel.name)
-                    )
+                    if self.gui_enabled:
+                        self.gui.status.update(
+                            _("status", "watching").format(channel=watching_channel.name)
+                        )
                     # break the state change chain by clearing the flag
                     self._state_change.clear()
                 else:
@@ -1150,7 +1179,9 @@ class Twitch:
                     self.change_state(State.IDLE)
                 del new_watching, selected_channel, watching_channel
             elif self._state is State.EXIT:
-                self.gui.status.update(_("gui", "status", "exiting"))
+                if self.gui_enabled:
+                    self.gui.tray.change_icon("pickaxe")
+                    self.gui.status.update(_("gui", "status", "exiting"))
                 # we've been requested to exit the application
                 break
             await self._state_change.wait()
@@ -1321,20 +1352,24 @@ class Twitch:
         )
 
     def watch(self, channel: Channel, *, update_status: bool = True):
-        self.gui.channels.set_watching(channel)
+        if self.gui_enabled:
+            self.gui.tray.change_icon("active")
+            self.gui.channels.set_watching(channel)
         self.watching_channel.set(channel)
         if update_status:
             status_text = _("status", "watching").format(channel=channel.name)
-            self.print(status_text)
-            self.gui.status.update(status_text)
+            if self.gui_enabled:
+                self.gui.status.update(status_text)
 
     def stop_watching(self):
-        self.gui.clear_drop()
+        if self.gui_enabled:
+            self.gui.clear_drop()
+            self.gui.channels.clear_watching()
         self.watching_channel.clear()
-        self.gui.channels.clear_watching()
 
     def restart_watching(self):
-        self.gui.progress.stop_timer()
+        if self.gui_enabled:
+            self.gui.progress.stop_timer()
         self._watching_restart.set()
 
     @task_wrapper
