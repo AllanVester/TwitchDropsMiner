@@ -36,7 +36,127 @@ except ImportError as exc:
 
 from cache import CurrentSeconds
 from translate import _
-from gui import GUIManager
+# Check if we're in web mode
+WEB_MODE = any(arg == "--web" for arg in sys.argv)
+
+# Create a minimal GUI placeholder for web mode
+if WEB_MODE:
+    class GUIManager:
+        """Minimal GUI implementation for web mode"""
+        def __init__(self, twitch):
+            self.settings = twitch.settings
+            self.close_requested = False
+            self.log = logging.getLogger("web_gui")
+            self._messages = []
+            self._status = "Initialized"
+            self._close_event = asyncio.Event()
+
+        async def initialize(self):
+            """Initialize GUI components"""
+            self.log.info("Web GUI initialized")
+            return self
+
+        def print(self, text):
+            """Print text to log"""
+            self.log.info(text)
+            self._messages.append(text)
+            return True
+
+        def update_window_title(self, *args):
+            """Dummy method for window title updates"""
+            pass
+
+        def close(self):
+            """Signal the application to close"""
+            self.close_requested = True
+            self._close_event.set()
+
+        async def wait_until_closed(self):
+            """Wait until the application is closed"""
+            await self._close_event.wait()
+
+        def grab_attention(self, sound=False):
+            """Dummy method for grabbing attention"""
+            pass
+
+        def change_icon(self, icon_name):
+            """Dummy method for changing icon"""
+            pass
+
+        @property
+        def tray(self):
+            """Return a dummy tray object"""
+            return self
+
+        @property
+        def status(self):
+            """Return a dummy status object"""
+            return self
+
+        @property  
+        def progress(self):
+            """Return a dummy progress object"""
+            return self
+
+        @property
+        def channels(self):
+            """Return a dummy channels object"""
+            return self
+
+        def update(self, status):
+            """Update status"""
+            self._status = status
+            self.log.info(f"Status updated: {status}")
+
+        def minute_almost_done(self):
+            """Dummy method for progress checking"""
+            return False
+
+        def stop_timer(self):
+            """Dummy method for stopping timer"""
+            pass
+
+        def clear_drop(self):
+            """Dummy method for clearing drop"""
+            pass
+
+        def clear_watching(self):
+            """Dummy method for clearing watching"""
+            pass
+
+        def set_watching(self, channel):
+            """Dummy method for setting watching channel"""
+            pass
+
+        def clear(self):
+            """Dummy method for clearing channels"""
+            pass
+
+        def set_games(self, games):
+            """Dummy method for setting games"""
+            pass
+
+        def start(self):
+            """Dummy method for starting GUI"""
+            pass
+
+        def close(self):
+            """Dummy method for closing GUI"""
+            pass
+
+        def prevent_close(self):
+            """Dummy method for preventing close"""
+            pass
+
+        def save(self, force=False):
+            """Dummy method for saving"""
+            pass
+
+        def print(self, message):
+            """Dummy method for printing"""
+            pass
+else:
+    from gui import GUIManager
 from channel import Channel
 from websocket import WebsocketPool
 from inventory import DropsCampaign
