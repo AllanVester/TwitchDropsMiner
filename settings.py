@@ -24,6 +24,7 @@ class SettingsFile(TypedDict):
     connection_quality: int
     tray_notifications: bool
     window_position: str
+    gui_enabled: bool
 
 
 default_settings: SettingsFile = {
@@ -39,6 +40,7 @@ default_settings: SettingsFile = {
     "language": DEFAULT_LANG,
     "tray_notifications": True,
     "window_position": "",
+    "gui_enabled": False,
 }
 
 
