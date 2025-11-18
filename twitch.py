@@ -1652,9 +1652,7 @@ class Twitch:
                 raise RequestInvalid()
             try:
                 response: aiohttp.ClientResponse | None = None
-                response = await self.gui.coro_unless_closed(
-                    session.request(method, url, **kwargs)
-                )
+                response = await session.request(method, url, **kwargs)
                 assert response is not None
                 logger.debug(f"Response: {response.status}: {response}")
                 if response.status < 500 or return_error:
