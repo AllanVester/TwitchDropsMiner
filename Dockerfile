@@ -22,6 +22,9 @@ RUN apt-get update && \
     wget \
     unzip \
     curl \
+    fonts-noto-color-emoji \
+    fonts-noto \
+    fontconfig \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

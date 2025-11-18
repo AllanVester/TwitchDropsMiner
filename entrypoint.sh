@@ -8,7 +8,7 @@ fi
 
 rm -f /tmp/.X1-lock
 
-Xvfb :1 -screen 0 1024x768x16 &
+Xvfb :1 -screen 0 1920x1080x16 &
 sleep 2
 
 fluxbox &
