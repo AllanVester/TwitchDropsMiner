@@ -4,6 +4,9 @@ services:
       dockerfile: Dockerfile
       context: .
     container_name: TwitchDropsMiner-VNC
+    volumes:
+      - ./cookies.jar:/usr/src/app/cookies.jar
+      - ./settings.json:/usr/src/app/settings.json
     ports:
       - "6080:6080"
     environment:
