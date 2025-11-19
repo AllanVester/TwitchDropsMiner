@@ -146,7 +146,7 @@ class Websocket:
                 )
                 break
 
-    @task_wrapper()
+    @task_wrapper
     async def _handle(self):
         # ensure we're logged in before connecting
         self.set_status(_("gui", "websocket", "initializing"))
