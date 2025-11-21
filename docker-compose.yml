@@ -10,5 +10,6 @@ services:
     ports:
       - "6080:6080"
     environment:
+      - TZ=Europe/Copenhagen
       - VNC_PASSWORD=secret
     # restart: unless-stopped
