@@ -12,4 +12,4 @@ services:
     environment:
       - TZ=Europe/Copenhagen
       - VNC_PASSWORD=secret
-    # restart: unless-stopped
+    restart: unless-stopped
