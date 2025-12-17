@@ -239,23 +239,10 @@ class GQLOperation(JsonType):
 
 
 GQL_OPERATIONS: dict[str, GQLOperation] = {
-    # retuns PlaybackAccessToken_Template, for fix 2024/5
-    "PlaybackAccessToken": GQLOperation(
-        "PlaybackAccessToken",
-        "ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9",
-        variables={
-            "isLive": True,
-            "login": "...",
-            "platform": "web",
-            "isVod": False,
-            "vodID": "",
-            "playerType": "site"
-        },
-    ),
     # returns stream information for a particular channel
     "GetStreamInfo": GQLOperation(
         "VideoPlayerStreamInfoOverlayChannel",
-        "e785b65ff71ad7b363b34878335f27dd9372869ad0c5740a130b9268bcdbe7e7",
+        "198492e0857f6aedead9665c81c5a06d67b25b58034649687124083ff288597d",
         variables={
             "channel": ...,  # channel login
         },
@@ -293,13 +280,18 @@ GQL_OPERATIONS: dict[str, GQLOperation] = {
     "Inventory": GQLOperation(
         "Inventory",
         "d86775d0ef16a63a33ad52e80eaff963b2d5b72fada7c991504a57496e1d8e4b",
-        # no variables needed
+        variables={
+            "fetchRewardCampaigns": False,
+        }
     ),
     # returns current state of drops (current drop progress)
     "CurrentDrop": GQLOperation(
         "DropCurrentSessionContext",
         "4d06b702d25d652afb9ef835d2a550031f1cf762b193523a92166f40ea3d142b",
-        # no variables needed
+        variables={
+            "channelID": ...,  # watched channel ID as a str
+            "channelLogin": "",  # always empty string
+        },
     ),
     # returns all available campaigns
     "Campaigns": GQLOperation(
@@ -318,45 +310,66 @@ GQL_OPERATIONS: dict[str, GQLOperation] = {
             "dropID": ...,  # campaign ID
         },
     ),
-    # returns drops available for a particular channel (unused)
+    # returns drops available for a particular channel
     "AvailableDrops": GQLOperation(
         "DropsHighlightService_AvailableDrops",
-        "782dad0f032942260171d2d80a654f88bdd0c5a9dddc392e9bc92218a0f42d20",
+        "9a62a09bce5b53e26e64a671e530bc599cb6aab1e5ba3cbd5d85966d3940716f",
         variables={
             "channelID": ...,  # channel ID as a str
+        },
+    ),
+    # retuns stream playback access token
+    "PlaybackAccessToken": GQLOperation(
+        "PlaybackAccessToken",
+        "ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9",
+        variables={
+            "isLive": True,
+            "isVod": False,
+            "login": ...,  # channel login
+            "platform": "web",
+            "playerType": "site",
+            "vodID": "",
         },
     ),
     # returns live channels for a particular game
     "GameDirectory": GQLOperation(
         "DirectoryPage_Game",
-        "c7c9d5aad09155c4161d2382092dc44610367f3536aac39019ec2582ae5065f9",
+        "98a996c3c3ebb1ba4fd65d6671c6028d7ee8d615cb540b0731b3db2a911d3649",
         variables={
-            "limit": ...,  # limit of channels returned
+            "limit": 30,  # limit of channels returned
             "slug": ...,  # game slug
-            "includeIsDJ": False,
             "imageWidth": 50,
+            "includeCostreaming": False,
             "options": {
                 "broadcasterLanguages": [],
                 "freeformTags": None,
                 "includeRestricted": ["SUB_ONLY_LIVE"],
                 "recommendationsContext": {"platform": "web"},
-                "sort": "RELEVANCE",
+                "sort": "RELEVANCE",  # also accepted: "VIEWER_COUNT"
+                "systemFilters": [],
                 "tags": [],
                 "requestID": "JIRA-VXP-2397",
             },
             "sortTypeIsRecency": False,
         },
     ),
+    "SlugRedirect": GQLOperation(  # can be used to turn game name -> game slug
+        "DirectoryGameRedirect",
+        "1f0300090caceec51f33c5e20647aceff9017f740f223c3c532ba6fa59f6b6cc",
+        variables={
+            "name": ...,  # game name
+        },
+    ),
     "NotificationsView": GQLOperation(  # unused, triggers notifications "update-summary"
         "OnsiteNotifications_View",
-        "db011164c7980ce0b90b04d8ecab0c27cfc8505170e2d6b1a5a51060a8e658df",
+        "e8e06193f8df73d04a1260df318585d1bd7a7bb447afa058e52095513f2bfa4f",
         variables={
             "input": {},
         },
     ),
     "NotificationsList": GQLOperation(  # unused
         "OnsiteNotifications_ListNotifications",
-        "65bdc7f01ed3082f4382a154d190e23ad5459771c61318265cfdb59f63aad492",
+        "11cdb54a2706c2c0b2969769907675680f02a6e77d8afe79a749180ad16bfea6",
         variables={
             "cursor": "",
             "displayType": "VIEWER",
