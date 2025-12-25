@@ -32,12 +32,17 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 RUN mkdir -p /opt/novnc && \
-    curl -L https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.zip -o /tmp/novnc.zip && \
+    NOVNC_TAG=$(curl -s "https://api.github.com/repos/novnc/noVNC/releases/latest" | sed -nE 's/.*"tag_name": "([^"]+)".*/\1/p') && \
+    curl -L "https://github.com/novnc/noVNC/archive/refs/tags/${NOVNC_TAG}.zip" -o /tmp/novnc.zip && \
     unzip /tmp/novnc.zip -d /opt && \
-    mv /opt/noVNC-1.4.0/* /opt/novnc && \
-    curl -L https://github.com/novnc/websockify/archive/refs/tags/v0.11.0.zip -o /tmp/ws.zip && \
+    mv /opt/noVNC*/* /opt/novnc/ && \
+    rm -r /opt/noVNC* /tmp/novnc.zip && \
+    \
+    WEBSOCKIFY_TAG=$(curl -s "https://api.github.com/repos/novnc/websockify/releases/latest" | sed -nE 's/.*"tag_name": "([^"]+)".*/\1/p') && \
+    curl -L "https://github.com/novnc/websockify/archive/refs/tags/${WEBSOCKIFY_TAG}.zip" -o /tmp/ws.zip && \
     unzip /tmp/ws.zip -d /opt && \
-    mv /opt/websockify-0.11.0 /opt/novnc/utils/websockify
+    mv /opt/websockify* /opt/novnc/utils/websockify && \
+    rm /tmp/ws.zip
 
 COPY . .
 
