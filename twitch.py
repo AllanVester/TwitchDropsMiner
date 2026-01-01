@@ -1588,6 +1588,8 @@ class Twitch:
                                 "Issue #126 is tracking a possible permanent solution, if you can help with that\n"
                                 "\nThanks ;)"
                                 )
+                                force_retry = True
+                                break
                     else:
                         raise MinerException(f"GQL error: {response_json['errors']}{additional_message if additional_message else ''}")
                 if force_retry:
