@@ -834,6 +834,8 @@ class Twitch:
                 filtered_campaigns = list(filter(self.filter_campaigns, campaigns))
                 for i, campaign in enumerate(filtered_campaigns):
                     game = campaign.game
+                    if game in self.wanted_games:
+                        continue
                     # get users priority preference
                     game_priority = priorities.get(game.name, 0)
                     if (game_priority):
@@ -1361,7 +1363,12 @@ class Twitch:
             # via GQL, and then comparing drop IDs.
             await asyncio.sleep(4)
             for attempt in range(8):
-                context = await self.gql_request(GQL_OPERATIONS["CurrentDrop"])
+                op = GQL_OPERATIONS["CurrentDrop"]
+                channel = self.watching_channel.get_with_default(None)
+                if channel is not None and "variables" in op and "channelID" in op["variables"]:
+                    context = await self.gql_request(op.with_variables({"channelID": str(channel.id)}))
+                else:
+                    context = await self.gql_request(op)
                 drop_data: JsonType | None = (
                     context["data"]["currentUser"]["dropCurrentSession"]
                 )
@@ -1692,8 +1699,8 @@ class Twitch:
             DropsCampaign(self, campaign_data, claimed_benefits)
             for campaign_data in inventory_data.values()
         ]
-        campaigns.sort(key=lambda c: c.active, reverse=True)
         campaigns.sort(key=lambda c: c.upcoming and c.starts_at or c.ends_at)
+        campaigns.sort(key=lambda c: c.active, reverse=True)
         #campaigns.sort(key=lambda c: c.linked, reverse=True)
         self._drops.clear()
         self.gui.inv.clear()
