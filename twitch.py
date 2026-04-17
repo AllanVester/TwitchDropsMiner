@@ -1066,7 +1066,11 @@ class Twitch:
                 # websocket update timed out, or the update was for an unrelated drop
                 if not use_active:
                     # we need to use GQL to get the current progress
-                    context = await self.gql_request(GQL_OPERATIONS["CurrentDrop"])
+                    op = GQL_OPERATIONS["CurrentDrop"]
+                    if "variables" in op and "channelID" in op["variables"]:
+                        context = await self.gql_request(op.with_variables({"channelID": str(channel.id)}))
+                    else:
+                        context = await self.gql_request(op)
                     drop_data: JsonType | None = (
                         context["data"]["currentUser"]["dropCurrentSession"]
                     )
