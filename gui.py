@@ -1238,7 +1238,7 @@ class InventoryOverview:
         self._settings: Settings = manager._twitch.settings
         self._filters = {
             "not_linked": IntVar(
-                master, self._settings.priority_mode is PriorityMode.PRIORITY_ONLY
+                master, self._settings.priority_mode in (PriorityMode.PRIORITY_ONLY, PriorityMode.ENDING_SOONEST_PRIORITY_ONLY)
             ),
             "upcoming": IntVar(master, 1),
             "expired": IntVar(master, 0),
@@ -1331,10 +1331,10 @@ class InventoryOverview:
         excluded = bool(self._filters["excluded"].get())
         upcoming = bool(self._filters["upcoming"].get())
         finished = bool(self._filters["finished"].get())
-        priority_only = self._settings.priority_mode is PriorityMode.PRIORITY_ONLY
+        priority_only = self._settings.priority_mode in (PriorityMode.PRIORITY_ONLY, PriorityMode.ENDING_SOONEST_PRIORITY_ONLY)
         if (
             campaign.required_minutes > 0  # don't show sub-only campaigns
-            and (not_linked or campaign.eligible)
+            and (not_linked or campaign.linked)
             and (campaign.active or upcoming and campaign.upcoming or expired and campaign.expired)
             and (
                 excluded or (
@@ -1424,7 +1424,7 @@ class InventoryOverview:
             takefocus=False,
         ).grid(column=1, row=2, sticky="w", padx=4)
         # Linking status
-        if campaign.eligible:
+        if campaign.linked:
             link_kwargs = {
                 "style": '',
                 "text": _("gui", "inventory", "status", "linked"),
@@ -1581,6 +1581,9 @@ class SettingsPanel:
             PriorityMode.ENDING_SOONEST: _("gui", "settings", "priority_modes", "ending_soonest"),
             PriorityMode.LOW_AVBL_FIRST: _(
                 "gui", "settings", "priority_modes", "low_availability"
+            ),
+            PriorityMode.ENDING_SOONEST_PRIORITY_ONLY: _(
+                "gui", "settings", "priority_modes", "ending_soonest_priority_only"
             ),
         }
 

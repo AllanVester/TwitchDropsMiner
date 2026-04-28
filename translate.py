@@ -178,6 +178,7 @@ class GUIPriorityModes(TypedDict):
     priority_only: str
     ending_soonest: str
     low_availability: str
+    ending_soonest_priority_only: str
 
 
 class GUISettings(TypedDict):
@@ -390,6 +391,7 @@ default_translation: Translation = {
                 "priority_only": "Priority list only",
                 "ending_soonest": "Ending soonest",
                 "low_availability": "Low availability first",
+                "ending_soonest_priority_only": "Ending soonest, priority list only",
             },
             "game_name": "Game name",
             "priority": "Priority",

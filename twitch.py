@@ -652,20 +652,20 @@ class Twitch:
                 exclude = self.settings.exclude
                 priority = self.settings.priority
                 priority_mode = self.settings.priority_mode
-                priority_only = priority_mode is PriorityMode.PRIORITY_ONLY
+                priority_only = priority_mode in (PriorityMode.PRIORITY_ONLY, PriorityMode.ENDING_SOONEST_PRIORITY_ONLY)
                 next_hour = datetime.now(timezone.utc) + timedelta(hours=1)
                 # sorted_campaigns: list[DropsCampaign] = list(self.inventory)
                 sorted_campaigns: list[DropsCampaign] = self.inventory
-                if not priority_only:
-                    if priority_mode is PriorityMode.ENDING_SOONEST:
-                        sorted_campaigns.sort(key=lambda c: c.ends_at)
-                    elif priority_mode is PriorityMode.LOW_AVBL_FIRST:
-                        sorted_campaigns.sort(key=lambda c: c.availability)
-                sorted_campaigns.sort(
-                    key=lambda c: (
-                        priority.index(c.game.name) if c.game.name in priority else MAX_INT
+                if priority_mode in (PriorityMode.ENDING_SOONEST, PriorityMode.ENDING_SOONEST_PRIORITY_ONLY):
+                    sorted_campaigns.sort(key=lambda c: c.ends_at)
+                elif priority_mode is PriorityMode.LOW_AVBL_FIRST:
+                    sorted_campaigns.sort(key=lambda c: c.availability)
+                if priority_mode is not PriorityMode.ENDING_SOONEST_PRIORITY_ONLY:
+                    sorted_campaigns.sort(
+                        key=lambda c: (
+                            priority.index(c.game.name) if c.game.name in priority else MAX_INT
+                        )
                     )
-                )
                 for campaign in sorted_campaigns:
                     game: Game = campaign.game
                     if (
@@ -1472,7 +1472,6 @@ class Twitch:
         ]
         campaigns.sort(key=lambda c: c.active, reverse=True)
         campaigns.sort(key=lambda c: c.upcoming and c.starts_at or c.ends_at)
-        campaigns.sort(key=lambda c: c.eligible, reverse=True)
 
         self._drops.clear()
         self.gui.inv.clear()
