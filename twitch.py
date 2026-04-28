@@ -948,7 +948,7 @@ class Twitch:
     @task_wrapper(critical=True)
     async def _maintenance_task(self) -> None:
         now = datetime.now(timezone.utc)
-        next_period = now + timedelta(hours=1)
+        next_period = now + timedelta(minutes=15)
         while True:
             # exit if there's no need to repeat the loop
             now = datetime.now(timezone.utc)
@@ -973,7 +973,7 @@ class Twitch:
             if next_trigger != next_period:
                 logger.log(CALL, "Maintenance task requests channels cleanup")
                 self.change_state(State.CHANNELS_CLEANUP)
-        # this triggers a restart of this task every (up to) 60 minutes
+        # this triggers a restart of this task every (up to) 15 minutes
         logger.log(CALL, "Maintenance task requests a reload")
         self.change_state(State.INVENTORY_FETCH)
 
