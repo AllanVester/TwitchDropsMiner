@@ -62,6 +62,7 @@ if __name__ == "__main__":
         log: bool
         tray: bool
         dump: bool
+        exit_on_error: bool
 
         # TODO: replace int with union of literal values once typeshed updates
         @property
@@ -106,6 +107,7 @@ if __name__ == "__main__":
     parser.add_argument("--tray", action="store_true")
     parser.add_argument("--log", action="store_true")
     parser.add_argument("--dump", action="store_true")
+    parser.add_argument("--exit-on-error", action="store_true")
     # undocumented debug args
     parser.add_argument(
         "--debug-ws", dest="_debug_ws", action="store_true", help=argparse.SUPPRESS
@@ -181,7 +183,8 @@ if __name__ == "__main__":
             client.gui.status.update(_("gui", "status", "terminated"))
             # notify the user about the closure
             client.gui.grab_attention(sound=True)
-        await client.gui.wait_until_closed()
+        if not (args.exit_on_error and exit_status != 0):
+            await client.gui.wait_until_closed()
         # save the application state
         # NOTE: we have to do it after wait_until_closed,
         # because the user can alter some settings between app termination and closing the window

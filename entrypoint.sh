@@ -16,4 +16,4 @@ x11vnc -display :1 -forever -usepw -shared -rfbport 5900 &
 /opt/novnc/utils/novnc_proxy --vnc localhost:5900 --listen 6080 &
 
 export DISPLAY=:1
-exec python main.py
+exec python main.py -vvv --exit-on-error
