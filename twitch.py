@@ -566,12 +566,14 @@ class Twitch:
         Higher numbers -> lower priority.
         MAX_INT (a really big number) signifies the lowest possible priority.
         """
-        if (
-            (game := channel.game) is None  # None when OFFLINE or no game set
-            or game not in self.wanted_games  # we don't care about the played game
-        ):
+        if (game := channel.game) is None:  # None when OFFLINE or no game set
             return MAX_INT
-        return self.wanted_games.index(game)
+        for campaign in self.inventory:
+            if campaign.can_earn(channel):
+                if not campaign.game.is_special() and game not in self.wanted_games:
+                    continue
+                return self.inventory.index(campaign)
+        return MAX_INT
 
     @staticmethod
     def _viewers_key(channel: Channel) -> int:
