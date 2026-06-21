@@ -268,7 +268,12 @@ def json_save(path: Path, contents: Mapping[Any, Any], *, sort: bool = False) ->
     new_path: Path = path.with_name(f"{path.name}.new")
     with new_path.open('w', encoding="utf8") as file:
         json.dump(contents, file, default=_serialize, sort_keys=sort, indent=4)
-    new_path.replace(path)
+    try:
+        new_path.replace(path)
+    except OSError:
+        import shutil
+        shutil.copyfile(new_path, path)
+        new_path.unlink()
 
 
 def webopen(url: URL | str):
