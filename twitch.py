@@ -5,7 +5,7 @@ import asyncio
 import logging
 from time import time
 from copy import deepcopy
-from itertools import chain
+from itertools import chain, islice
 from functools import partial
 from collections import abc, deque, OrderedDict
 from datetime import datetime, timedelta, timezone
@@ -733,6 +733,7 @@ class Twitch:
                 # NOTE: we consider only campaigns that can be progressed
                 # NOTE: we use another set so that we can set them online separately
                 no_acl: set[Game] = set()
+                acl_lists: list[list[Channel]] = []
                 acl_channels: set[Channel] = set()
                 next_hour = datetime.now(timezone.utc) + timedelta(hours=1)
                 for campaign in self.inventory:
@@ -741,6 +742,7 @@ class Twitch:
                         and campaign.can_earn_within(next_hour)
                     ):
                         if campaign.allowed_channels:
+                            acl_lists.append(campaign.allowed_channels)
                             acl_channels.update(campaign.allowed_channels)
                         else:
                             no_acl.add(campaign.game)
@@ -748,12 +750,15 @@ class Twitch:
                 acl_channels.difference_update(new_channels)
                 # use the other set to set them online if possible
                 await self.bulk_check_online(acl_channels)
-                # finally, add them as new channels
-                new_channels.update(acl_channels)
+                # finally, add up to 10 channels per campaign, preferring online ones
+                for acl_list in acl_lists:
+                    new_channels.update(
+                        islice(sorted(acl_list, key=lambda ch: ch.online, reverse=True), 10)
+                    )
                 for game in no_acl:
                     # for every campaign without an ACL, for it's game,
                     # add a list of live channels with drops enabled
-                    new_channels.update(await self.get_live_streams(game, drops_enabled=True))
+                    new_channels.update(islice(await self.get_live_streams(game, drops_enabled=True), 10))
                 # sort them descending by viewers, by priority and by game priority
                 # NOTE: Viewers sort also ensures ONLINE channels are sorted to the top
                 # NOTE: We can drop using the set now, because there's no more channels being added
